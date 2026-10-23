@@ -92,6 +92,8 @@ def save_outputs(state: AuditState, out_dir: str | Path, title: str, mode: str) 
 
     run = {
         "mode": mode,
+        "model": state.model,
+        "usage": state.usage,
         "title": title,
         "rows": len(state.df),
         "summary": state.summary,

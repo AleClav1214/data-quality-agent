@@ -17,7 +17,9 @@ import pandas as pd
 from .registry import TOOL_SPECS, dispatch, to_model_text
 from .tools import AuditState
 
-DEFAULT_MODEL = os.environ.get("DQ_AGENT_MODEL", "claude-sonnet-5-5")
+BUILTIN_MODEL = "claude-sonnet-5-5"  # used for the final runs we report
+DEFAULT_MODEL = os.environ.get("DQ_AGENT_MODEL", BUILTIN_MODEL)
+USAGE_FIELDS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 
 SYSTEM_PROMPT = """You are a careful data quality auditor working for a consulting team.
 Your goal: find the problems in a dataset that would mislead a dashboard or break a
@@ -54,7 +56,8 @@ def run_agent(df: pd.DataFrame, *, dataset_description: str = "", client=None,
               reference_date: str | None = None, verbose: bool = True) -> AuditState:
     """Run the audit. Returns the AuditState holding findings, logged
     issues, the tool log, and the agent's summary."""
-    state = AuditState(df=df)
+    state = AuditState(df=df, model=model)
+    state.usage = {"api_calls": 0, **{k: 0 for k in USAGE_FIELDS}}
     if reference_date:
         state.reference_date = pd.Timestamp(reference_date)
 
@@ -75,6 +78,10 @@ def run_agent(df: pd.DataFrame, *, dataset_description: str = "", client=None,
             model=model, max_tokens=4096, system=SYSTEM_PROMPT,
             tools=TOOL_SPECS, messages=messages,
         )
+        state.usage["api_calls"] += 1
+        usage = getattr(response, "usage", None)  # token counts as billed (the fake test client has none)
+        for k in USAGE_FIELDS:
+            state.usage[k] += getattr(usage, k, None) or 0
         content = [_block_to_dict(b) for b in response.content]
         messages.append({"role": "assistant", "content": content})
 

@@ -96,6 +96,18 @@ Fill in the agent rows with your own run, and only report numbers you actually g
 ```bash
 pip install -r requirements.txt
 
+# Everything in one command: baseline + agent on both datasets, scorecards,
+# regression chart, and a summary table vs. the script and the reference points
+python scripts/run_all.py --baseline-only   # no API key needed
+python scripts/run_all.py                   # development run: claude-haiku-5-5 -> outputs/dev/
+python scripts/run_all.py --final           # the run to report: default model -> outputs/final/
+```
+
+`run_all.py` stops with instructions if `ANTHROPIC_API_KEY` is missing, says how many API calls it may make and asks before making them (`--yes` skips the question), and never prints the key. The key can be an environment variable or a line in a git-ignored `.env` file (see `.env.example`). Each agent run records its model, API calls, and token counts in `run.json`. The summary recomputes every reference number (raw, script, projection, floor) from the data and warns if any no longer matches this README.
+
+The individual steps, if you want to run them one at a time:
+
+```bash
 # 1. Make the test data and answer keys (Auto MPG + package log)
 python scripts/make_dataset.py
 
@@ -137,8 +149,10 @@ dq_agent/
   mpg_data.py   Auto MPG with planted errors (real data)
   dataset.py    synthetic package log with planted errors
   evaluate.py   precision / recall scoring
-scripts/        make_dataset · run_audit · evaluate · regression_demo
-tests/          22 tests, including an end-to-end loop test with a fake API client
+  regression.py slope fit and slope error, shared by the chart and the summary
+  compare.py    agent vs. script vs. reference points, computed fresh each run
+scripts/        run_all · make_dataset · run_audit · evaluate · regression_demo
+tests/          32 tests, including an end-to-end loop test with a fake API client
 data/source/    original Auto MPG file
 ```
 

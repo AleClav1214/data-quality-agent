@@ -75,6 +75,8 @@ class AuditState:
     done: bool = False
     stop_reason: str = ""
     fingerprint_start: str = ""
+    model: str = ""                                     # empty for the baseline (no AI)
+    usage: dict = field(default_factory=dict)          # API calls and tokens, for cost reporting
 
     def __post_init__(self) -> None:
         self.fingerprint_start = fingerprint(self.df)

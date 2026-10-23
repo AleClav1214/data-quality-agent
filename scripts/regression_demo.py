@@ -23,19 +23,13 @@ import pandas as pd  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dq_agent.fixes import apply_fixes, numeric_pairs  # noqa: E402
+from dq_agent.regression import X, Y, fit, slope_error_pct  # noqa: E402
 from dq_agent.tools import load_csv  # noqa: E402
 
 # Chart colors (reference palette from the dataviz guidelines)
 SURFACE, INK, INK_2, MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#a8a7a1", "#e6e5e1"
 FIT = "#2a78d6"
-X, Y = "weight", "mpg"
 XLIM, YLIM = (1400, 5400), (0, 50)
-
-
-def fit(pairs: pd.DataFrame) -> dict:
-    slope, intercept = np.polyfit(pairs[X], pairs[Y], 1)
-    r = np.corrcoef(pairs[X], pairs[Y])[0, 1]
-    return {"slope": slope, "intercept": intercept, "r2": r * r, "n": len(pairs)}
 
 
 def main() -> None:
@@ -44,13 +38,16 @@ def main() -> None:
     ap.add_argument("--clean", default="data/mpg_clean.csv")
     ap.add_argument("--baseline-run", default="outputs/mpg_baseline/run.json")
     ap.add_argument("--agent-run", default="outputs/mpg_agent/run.json")
+    ap.add_argument("--no-agent", action="store_true", help="Leave out the agent panel even if a run exists.")
     ap.add_argument("--out", default="outputs/regression_comparison.png")
     args = ap.parse_args()
 
     messy, clean = load_csv(args.messy), load_csv(args.clean)
     versions = [("Raw data (no cleaning)", numeric_pairs(messy, X, Y), None)]
-    for label, path in (("Cleaned by rule-based script", args.baseline_run),
-                        ("Cleaned by AI agent", args.agent_run)):
+    runs = [("Cleaned by rule-based script", args.baseline_run)]
+    if not args.no_agent:
+        runs.append(("Cleaned by AI agent", args.agent_run))
+    for label, path in runs:
         if Path(path).exists():
             issues = json.loads(Path(path).read_text())["issues"]
             fixed, log = apply_fixes(messy, issues)
@@ -63,7 +60,7 @@ def main() -> None:
     for label, pairs, log in versions:
         f = fit(pairs)
         f["label"] = label
-        f["slope_error_pct"] = abs(f["slope"] - truth["slope"]) / abs(truth["slope"]) * 100
+        f["slope_error_pct"] = slope_error_pct(f["slope"], truth["slope"])
         f["off_chart"] = int(((pairs[X] < XLIM[0]) | (pairs[X] > XLIM[1]) |
                               (pairs[Y] < YLIM[0]) | (pairs[Y] > YLIM[1])).sum())
         f["pairs"] = pairs
@@ -101,7 +98,7 @@ def main() -> None:
         for s in ("left", "bottom"):
             ax.spines[s].set_color(GRID)
         note = (f"Slope: {f['slope'] * 1000:+.2f} mpg per 1,000 lbs\n"
-                f"True:  {truth['slope'] * 1000:+.2f}   ·   error {f['slope_error_pct']:.0f}%\n"
+                f"True:  {truth['slope'] * 1000:+.2f}   ·   error {f['slope_error_pct']:.1f}%\n"
                 f"R² = {f['r2']:.2f}   ·   n = {f['n']}")
         if f["off_chart"]:
             note += f"\n{f['off_chart']} impossible points outside this view"
