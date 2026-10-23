@@ -85,6 +85,10 @@ The kilogram entries are the hard case. They land between 828 and 1,794 here, lo
 | Package log | Baseline script | 227 / 240 | 95% | 197 | 54% | — |
 | Package log | AI agent | *run it* | | | | |
 
+![Script vs. AI agent: recall, precision, and false alarms](docs/cleaning_comparison_baseline.png)
+
+*Does the agent clean smarter? Recall and precision are percentages and false alarms is a count, so each has its own axis. The agent rows stay "pending" until a real run fills them in. `run_all.py` redraws this chart with the agent's bars.*
+
 Where the script falls short:
 - **Auto MPG:** it misses all 6 kilogram weights, because its outlier rule only flags values far from the rest. Adding a weight rule of 1,500–6,000 lbs, which is the kind of domain knowledge the agent is told to use, catches 4 of them and cuts the slope error from 4.5% to 2.5%. Two kilogram entries (1,601 and 1,794) look like real light cars and slip past both.
 - **Package log:** it flags 192 blank pickup dates that are expected, and its outlier rule misses 13 of 20 impossible weights.
@@ -125,6 +129,9 @@ python scripts/evaluate.py outputs/mpg_baseline/run.json outputs/mpg_agent/run.j
 # 5. Regression chart: raw vs. script-cleaned vs. agent-cleaned
 python scripts/regression_demo.py        # -> outputs/regression_comparison.png
 
+# 6. Cleaning chart: script vs. agent on recall, precision, false alarms
+python scripts/cleaning_chart.py --runs-dir outputs/dev   # -> outputs/dev/cleaning_comparison.png
+
 # Tests (no API key; the agent loop is tested with a fake client)
 pytest
 ```
@@ -151,8 +158,8 @@ dq_agent/
   evaluate.py   precision / recall scoring
   regression.py slope fit and slope error, shared by the chart and the summary
   compare.py    agent vs. script vs. reference points, computed fresh each run
-scripts/        run_all · make_dataset · run_audit · evaluate · regression_demo
-tests/          32 tests, including an end-to-end loop test with a fake API client
+scripts/        run_all · make_dataset · run_audit · evaluate · regression_demo · cleaning_chart
+tests/          35 tests, including an end-to-end loop test with a fake API client
 data/source/    original Auto MPG file
 ```
 

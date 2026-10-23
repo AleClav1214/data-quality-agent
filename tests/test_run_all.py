@@ -155,6 +155,7 @@ def test_full_run_with_faked_agent_steps(tmp_path, monkeypatch):
     assert all("claude-haiku-5-5" in a for a in seen.values())  # dev runs use the cheap model
     assert not (out / "mpg_agent" / "stale.txt").exists()      # old agent output cleared first
     assert (out / "regression_comparison.png").exists()
+    assert (out / "cleaning_comparison.png").exists()
     summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
     agent = next(r for r in summary["rows"] if r["dataset"] == "mpg" and r["auditor"] == "AI agent")
     assert agent["model"] == "claude-haiku-5-5"

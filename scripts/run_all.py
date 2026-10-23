@@ -1,5 +1,6 @@
 """One command for the whole evaluation: baseline + agent on both datasets,
-scorecards, the regression chart with the agent panel, and a summary table.
+scorecards, the regression chart with the agent panel, the script-vs-agent
+cleaning chart, and a summary table.
 
     python scripts/run_all.py                  # development run (cheap model, outputs/dev/)
     python scripts/run_all.py --final          # the run we report (default model, outputs/final/)
@@ -177,6 +178,9 @@ def main(argv: list[str] | None = None) -> int:
                                   "--baseline-run", str(out / "mpg_baseline" / "run.json"),
                                   "--agent-run", str(out / "mpg_agent" / "run.json"),
                                   *([] if use_agent else ["--no-agent"]), "--out", str(chart)], log_dir)
+    cleaning = out / "cleaning_comparison.png"
+    run_step("cleaning_chart", ["scripts/cleaning_chart.py", "--runs-dir", str(out),
+                                *([] if use_agent else ["--no-agent"]), "--out", str(cleaning)], log_dir)
 
     runs = {(d, m): json.loads((out / f"{d}_{m}" / "run.json").read_text(encoding="utf-8"))
             for d in DATASETS for m in modes}
@@ -193,7 +197,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print("\n" + "=" * 78 + "\n")
     print(text)
-    print(f"Saved: {out / 'summary.md'}\n       {chart}\n       scorecards in {log_dir / 'evaluate.log'}")
+    print(f"Saved: {out / 'summary.md'}\n       {chart}\n       {cleaning}\n"
+          f"       scorecards in {log_dir / 'evaluate.log'}")
     if not use_agent:
         print("\nAgent skipped (--baseline-only). Add ANTHROPIC_API_KEY and run without the flag.")
     return 0
